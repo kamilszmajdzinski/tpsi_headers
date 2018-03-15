@@ -13,7 +13,7 @@ import java.util.UUID;
 
 public class TPSIServer {
     public static void main(String[] args) throws Exception {
-        int port = 8080;
+        int port = 8082;
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/", new RootHandler());
         server.createContext("/echo/", new EchoHandler());
@@ -85,7 +85,7 @@ public class TPSIServer {
 
             byte[] response = Files.readAllBytes(Paths.get("index.html"));
             exchange.getResponseHeaders().set("Content-Type", "text/html");
-            exchange.getResponseHeaders().set("Set-Cookie", "ID=" + id);
+            exchange.getResponseHeaders().set("Set-Cookie", "ID=" + id + ";path="+"/echo/");
 
             exchange.sendResponseHeaders(200, response.length);
             OutputStream os = exchange.getResponseBody();
@@ -102,18 +102,26 @@ public class TPSIServer {
 
             List<String> authorization;
 
-            if(exchange.getRequestHeaders().containsKey("Authorization")) {
-                authorization = exchange.getRequestHeaders().get("Authorization");
-                byte[] credentials = Base64.getDecoder().decode(authorization.get(0).split(" ")[1].getBytes());
-                String[] stringCredentials = new String(credentials).split(":");
-                String reqUser = stringCredentials[0], reqPass = stringCredentials[1];
 
-                if ((reqUser.equals(user))&&(reqPass.equals(pass))){
-                    RootHandler.standardResponse(exchange);
-                } else {
-                    unauthorizedResponse(exchange);
-                }
-            }else unauthorizedResponse(exchange);
+
+            try{
+
+                if(exchange.getRequestHeaders().containsKey("Authorization")) {
+                    authorization = exchange.getRequestHeaders().get("Authorization");
+                    byte[] credentials = Base64.getDecoder().decode(authorization.get(0).split(" ")[1].getBytes());
+                    String[] stringCredentials = new String(credentials).split(":");
+                    String reqUser = stringCredentials[0], reqPass = stringCredentials[1];
+
+                    if ((reqUser.equals(user))&&(reqPass.equals(pass))){
+                        RootHandler.standardResponse(exchange);
+                    } else {
+                        unauthorizedResponse(exchange);
+                    }
+                }else unauthorizedResponse(exchange);
+
+            }catch (Exception e){
+                unauthorizedResponse(exchange);
+            }
         }
 
         public void unauthorizedResponse(HttpExchange exchange) throws IOException{
